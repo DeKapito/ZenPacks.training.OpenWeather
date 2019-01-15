@@ -1,0 +1,114 @@
+name: ZenPacks.training.OpenWeather
+
+zProperties:
+  DEFAULTS:
+    category: Open Weather
+
+  zOWeatherAPIKey: {}
+  zOWeatherLocations:
+    type: lines
+    default:
+      - Austin, TX
+      - San Jose, CA
+      - Annapolis, MD
+
+classes:
+  OWeatherDevice:
+    base: [zenpacklib.Device]
+    label: Open Weather API
+
+  OWeatherLocation:
+    base: [zenpacklib.Component]
+    label: Location
+
+    properties:
+      city_name:
+        label: Name
+
+      country_code:
+        label: Country Code
+
+      timezone:
+        label: Time Zone
+
+      weather:
+        label: Weather
+
+      api_link:
+        label: API Link
+        grid_display: False
+
+class_relationships:
+  - OWeatherDevice 1:MC OWeatherLocation
+
+device_classes:
+  /OpenWeather:
+    zProperties:
+      zPythonClass: ZenPacks.training.OpenWeather.OWeatherDevice
+      zPingMonitorIgnore: true
+      zSnmpMonitorIgnore: true
+      zCollectorPlugins:
+        - OpenWeather.Locations
+    templates:
+      Location:
+        description: Location weather monitoring using the Open Weather API.
+        targetPythonClass: ZenPacks.training.OpenWeather.OWeatherLocation
+
+        datasources:
+          conditions:
+            type: Python
+            plugin_classname: ZenPacks.training.OpenWeather.dsplugins.Conditions
+            cycletime: "600"
+
+            datapoints:
+              temp: GAUGE
+              pressure: GAUGE
+              humidity: GAUGE
+              temp_min: GAUGE
+              temp_max: GAUGE
+              speed: GAUGE
+
+        graphs:
+          Temperatures:
+            units: "degrees K."
+
+            graphpoints:
+              Temperature:
+                dpName: conditions_temp
+                format: "%7.2lf"
+
+              Min:
+                dpName: conditions_temp_min
+                format: "%7.2lf"
+
+              Max:
+                dpName: conditions_temp_max
+                format: "%7.2lf"
+
+          Humidity:
+            units: percent
+            miny: 0
+            maxy: 100
+
+            graphpoints:
+              Humidity:
+                dpName: conditions_humidity
+                format: "%7.2lf%%"
+
+          Pressure:
+            units: millibars
+            miny: 0
+
+            graphpoints:
+              Pressure:
+                dpName: conditions_pressure
+                format: "%7.0lf"
+
+          Wind Speed:
+            units: kph
+            miny: 0
+
+            graphpoints:
+              Sustained:
+                dpName: conditions_speed
+                format: "%7.2lf"
