@@ -49,7 +49,7 @@ class Conditions(PythonDataSourcePlugin):
         for datasource in config.datasources:
             try:
                 response = yield getPage(
-                    'https://api.openweathermap.org/data/2.5/weather?q={city_name},{country_code}&appid={api_key}'
+                    'https://api.openweathermap.org/data/2.5/weather?q={city_name},{country_code}&units=metric&appid={api_key}'
                     .format(
                         api_key=datasource.params['api_key'],
                         city_name=datasource.params['city_name'],
@@ -78,6 +78,10 @@ class Conditions(PythonDataSourcePlugin):
                             value = value.strip(' %')
 
                         value = float(value)
+
+                        if datapoint_id == 'pressure':
+                            value *= 100
+
                     except (TypeError, ValueError):
                         # Sometimes values are NA or not available.
                         continue

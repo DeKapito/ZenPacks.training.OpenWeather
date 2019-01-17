@@ -58,7 +58,7 @@ device_classes:
           conditions:
             type: Python
             plugin_classname: ZenPacks.training.OpenWeather.dsplugins.Conditions
-            cycletime: "600"
+            cycletime: "120"
 
             datapoints:
               temp: GAUGE
@@ -70,7 +70,7 @@ device_classes:
 
         graphs:
           Temperatures:
-            units: "degrees K."
+            units: "degrees C."
 
             graphpoints:
               Temperature:
@@ -96,16 +96,16 @@ device_classes:
                 format: "%7.2lf%%"
 
           Pressure:
-            units: millibars
+            units: pascals
             miny: 0
 
             graphpoints:
               Pressure:
                 dpName: conditions_pressure
-                format: "%7.0lf"
+                format: "%7.2lf"
 
           Wind Speed:
-            units: kph
+            units: mps
             miny: 0
 
             graphpoints:
