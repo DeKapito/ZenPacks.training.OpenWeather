@@ -62,11 +62,35 @@ class Conditions(PythonDataSourcePlugin):
                     config.id,
                     datasource.params['location_name'])
 
+                data['events'].append({
+                    'device': config.id,
+                    'component': datasource.component,
+                    'severity': 5,
+                    'message':
+                        '{}: failed to get conditions data for {}'
+                        .format(config.id, datasource.params['location_name']),
+                })
                 continue
 
-            weather = response['weather'][0]
-            main = response['main']
-            wind = response['wind']
+            try:
+                weather = response['weather'][0]
+                main = response['main']
+                wind = response['wind']
+            except (KeyError, TypeError):
+                LOG.exception(
+                    "%s: failed to get conditions data for %s",
+                    config.id,
+                    datasource.params['location_name'])
+
+                data['events'].append({
+                    'device': config.id,
+                    'component': datasource.component,
+                    'severity': 5,
+                    'message':
+                        '{}: failed to get conditions data for {}'
+                            .format(config.id, datasource.params['location_name']),
+                })
+
             for datapoint_id in (x.id for x in datasource.points):
                 for block in (weather, main, wind):
                     if datapoint_id not in block:

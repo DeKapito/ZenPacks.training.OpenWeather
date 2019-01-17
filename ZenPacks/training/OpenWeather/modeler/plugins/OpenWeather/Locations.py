@@ -49,33 +49,41 @@ class Locations(PythonPlugin):
 
             returnValue(None)
 
-        rm = self.relMap()
-
+        responses = []
         for location in locations:
             try:
                 response = yield getPage(
                     'http://autocomplete.wunderground.com/aq?query={query}'
                     .format(query=urllib.quote(location)))
 
-                response = json.loads(response)
+                responses.append(json.loads(response))
             except Exception, e:
                 log.error(
                     "%s: %s", device.id, e)
 
                 returnValue(None)
 
-            for result in response['RESULTS']:
-                rm.append(self.objectMap({
-                    'id': self.prepId(result['zmw']),
-                    'title': result['name'],
-                    'api_link': result['l'],
-                    'city_name': result['name'].split(',')[0],
-                    'country_code': result['c'],
-                    'timezone': result['tzs'],
-                    }))
-
-        returnValue(rm)
+        returnValue(responses)
 
     def process(self, device, results, log):
         """Process results. Return iterable of datamaps or None."""
-        return results
+
+        rm = self.relMap()
+
+        for response in results:
+            try:
+                for result in response['RESULTS']:
+                    rm.append(self.objectMap({
+                        'id': self.prepId(result['zmw']),
+                        'title': result['name'],
+                        'api_link': result['l'],
+                        'city_name': result['name'].split(',')[0],
+                        'country_code': result['c'],
+                        'timezone': result['tzs'],
+                        }))
+            except (KeyError, TypeError), e:
+                log.error(
+                    "%s: %s", device.id, e)
+                continue
+
+        return rm
