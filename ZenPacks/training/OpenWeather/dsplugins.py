@@ -9,6 +9,7 @@ import json
 import time
 
 from Products.DataCollector.plugins.DataMaps import ObjectMap
+from zenoss.protocols.protobufs.zep_pb2 import SEVERITY_ERROR, SEVERITY_CLEAR
 
 # Twisted Imports
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -65,7 +66,9 @@ class Conditions(PythonDataSourcePlugin):
                 data['events'].append({
                     'device': config.id,
                     'component': datasource.component,
-                    'severity': 5,
+                    'eventKey': 'oweather-conditions',
+                    'eventClassKey': 'oweather',
+                    'severity': SEVERITY_ERROR,
                     'message':
                         '{}: failed to get conditions data for {}'
                         .format(config.id, datasource.params['location_name']),
@@ -85,7 +88,9 @@ class Conditions(PythonDataSourcePlugin):
                 data['events'].append({
                     'device': config.id,
                     'component': datasource.component,
-                    'severity': 5,
+                    'eventKey': 'oweather-conditions',
+                    'eventClassKey': 'oweather',
+                    'severity': SEVERITY_ERROR,
                     'message':
                         '{}: failed to get conditions data for {}'
                             .format(config.id, datasource.params['location_name']),

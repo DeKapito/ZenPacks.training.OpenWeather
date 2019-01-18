@@ -10,7 +10,9 @@ from twisted.web.client import getPage
 
 # Zenoss Imports
 from Products.DataCollector.plugins.CollectorPlugin import PythonPlugin
-
+from Products.ZenCollector.interfaces import IEventService
+from zope.component import getUtility
+from zenoss.protocols.protobufs.zep_pb2 import SEVERITY_ERROR, SEVERITY_CLEAR
 
 class Locations(PythonPlugin):
 
@@ -30,6 +32,7 @@ class Locations(PythonPlugin):
     def collect(self, device, log):
         """Asynchronously collect data from device. Return a deferred."""
         log.info("%s: collecting data", device.id)
+        self._eventService = getUtility(IEventService)
 
         apikey = getattr(device, 'zOWeatherAPIKey', None)
         if not apikey:
@@ -37,6 +40,16 @@ class Locations(PythonPlugin):
                 "%s: %s not set. Get one from https://openweathermap.org/api",
                 device.id,
                 'zOWeatherAPIKey')
+
+            self._eventService.sendEvent({
+                'device': device.id,
+                'eventKey': 'oweather-collect',
+                'eventClassKey': 'oweather',
+                'severity': SEVERITY_ERROR,
+                'message':
+                    '{}: {} not set. Get one from https://openweathermap.org/api'
+                        .format(device.id, 'zOWeatherAPIKey')
+            })
 
             returnValue(None)
 
@@ -47,7 +60,26 @@ class Locations(PythonPlugin):
                 device.id,
                 'zOWeatherLocations')
 
+            self._eventService.sendEvent({
+                'device': device.id,
+                'eventKey': 'oweather-collect',
+                'eventClassKey': 'oweather',
+                'severity': SEVERITY_ERROR,
+                'message':
+                    '{}: {} not set'
+                        .format(device.id, 'zOWeatherLocations')
+            })
+
             returnValue(None)
+
+        self._eventService.sendEvent({
+            'device': device.id,
+            'eventKey': 'oweather-collect',
+            'eventClassKey': 'oweather',
+            'severity': SEVERITY_CLEAR,
+            'message': 'All good'
+        })
+
 
         responses = []
         for location in locations:
