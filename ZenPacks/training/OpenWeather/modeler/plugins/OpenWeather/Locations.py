@@ -28,6 +28,15 @@ class Locations(PythonPlugin):
 
     deviceProperties = PythonPlugin.deviceProperties + requiredProperties
 
+    def makeEvent(self, eventService, deviceId, severity, message):
+        eventService.sendEvent({
+            'device': deviceId,
+            'eventKey': 'oweather-collect',
+            'eventClassKey': 'oweather',
+            'severity': severity,
+            'message': message
+        })
+
     @inlineCallbacks
     def collect(self, device, log):
         """Asynchronously collect data from device. Return a deferred."""
@@ -36,50 +45,42 @@ class Locations(PythonPlugin):
 
         apikey = getattr(device, 'zOWeatherAPIKey', None)
         if not apikey:
-            log.error(
-                "%s: %s not set. Get one from https://openweathermap.org/api",
-                device.id,
-                'zOWeatherAPIKey')
+            message = '{}: {} not set. Get one from https://openweathermap.org/api'\
+                .format(device.id, 'zOWeatherAPIKey')
 
-            self._eventService.sendEvent({
-                'device': device.id,
-                'eventKey': 'oweather-collect',
-                'eventClassKey': 'oweather',
-                'severity': SEVERITY_ERROR,
-                'message':
-                    '{}: {} not set. Get one from https://openweathermap.org/api'
-                        .format(device.id, 'zOWeatherAPIKey')
-            })
+            log.error(message)
+
+            self.makeEvent(
+                self._eventService,
+                device.id,
+                SEVERITY_ERROR,
+                message
+            )
 
             returnValue(None)
 
         locations = getattr(device, 'zOWeatherLocations', None)
         if not locations:
-            log.error(
-                "%s: %s not set.",
-                device.id,
-                'zOWeatherLocations')
+            message = '{}: {} not set'\
+                .format(device.id, 'zOWeatherLocations')
 
-            self._eventService.sendEvent({
-                'device': device.id,
-                'eventKey': 'oweather-collect',
-                'eventClassKey': 'oweather',
-                'severity': SEVERITY_ERROR,
-                'message':
-                    '{}: {} not set'
-                        .format(device.id, 'zOWeatherLocations')
-            })
+            log.error(message)
+
+            self.makeEvent(
+                self._eventService,
+                device.id,
+                SEVERITY_ERROR,
+                message
+            )
 
             returnValue(None)
 
-        self._eventService.sendEvent({
-            'device': device.id,
-            'eventKey': 'oweather-collect',
-            'eventClassKey': 'oweather',
-            'severity': SEVERITY_CLEAR,
-            'message': 'All good'
-        })
-
+        self.makeEvent(
+                self._eventService,
+                device.id,
+                SEVERITY_CLEAR,
+                'All good'
+            )
 
         responses = []
         for location in locations:
