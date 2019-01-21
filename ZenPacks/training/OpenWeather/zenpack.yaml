@@ -5,6 +5,9 @@ zProperties:
     category: Open Weather
 
   zOWeatherAPIKey: {}
+  zOWeatherAPIVersion:
+    type: float
+    default: 2.5
   zOWeatherLocations:
     type: lines
     default:

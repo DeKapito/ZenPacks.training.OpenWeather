@@ -23,6 +23,7 @@ class Locations(PythonPlugin):
 
     requiredProperties = (
         'zOWeatherAPIKey',
+        'zOWeatherAPIVersion',
         'zOWeatherLocations',
         )
 
@@ -63,6 +64,22 @@ class Locations(PythonPlugin):
         if not locations:
             message = '{}: {} not set'\
                 .format(device.id, 'zOWeatherLocations')
+
+            log.error(message)
+
+            self.makeEvent(
+                self._eventService,
+                device.id,
+                SEVERITY_ERROR,
+                message
+            )
+
+            returnValue(None)
+
+        apiver = getattr(device, 'zOWeatherAPIVersion', None)
+        if not apiver:
+            message = '{}: {} not set' \
+                .format(device.id, 'zOWeatherAPIVersion')
 
             log.error(message)
 

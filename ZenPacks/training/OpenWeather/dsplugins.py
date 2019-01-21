@@ -38,6 +38,7 @@ class Conditions(PythonDataSourcePlugin):
     def params(cls, datasource, context):
         return {
             'api_key': context.zOWeatherAPIKey,
+            'api_version': context.zOWeatherAPIVersion,
             'city_name': context.city_name,
             'country_code': context.country_code,
             'location_name': context.title,
@@ -50,14 +51,15 @@ class Conditions(PythonDataSourcePlugin):
         for datasource in config.datasources:
             try:
                 response = yield getPage(
-                    'https://api.openweathermap.org/data/2.5/weather?q={city_name},{country_code}&units=metric&appid={api_key}'
+                    'https://api.openweathermap.org/data/{api_version}/weather?q={city_name},{country_code}&units=metric&appid={api_key}'
                     .format(
                         api_key=datasource.params['api_key'],
+                        api_version=datasource.params['api_version'],
                         city_name=datasource.params['city_name'],
                         country_code=datasource.params['country_code']))
 
                 response = json.loads(response)
-            except Exception:
+            except Exception, e:
                 LOG.exception(
                     "%s: failed to get conditions data for %s",
                     config.id,
@@ -69,9 +71,12 @@ class Conditions(PythonDataSourcePlugin):
                     'eventKey': 'oweather-conditions',
                     'eventClassKey': 'oweather',
                     'severity': SEVERITY_ERROR,
-                    'message':
+                    'summary':
                         '{}: failed to get conditions data for {}'
                         .format(config.id, datasource.params['location_name']),
+                    'message':
+                        '{}: failed to get conditions data for {}. Reason: {}'
+                        .format(config.id, datasource.params['location_name'], e.message),
                 })
                 continue
 
