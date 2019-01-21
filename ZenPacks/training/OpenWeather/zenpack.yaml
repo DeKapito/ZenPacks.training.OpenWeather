@@ -67,9 +67,17 @@ device_classes:
               temp: GAUGE
               pressure: GAUGE
               humidity: GAUGE
-              temp_min: GAUGE
-              temp_max: GAUGE
+              tempMin: GAUGE
+              tempMax: GAUGE
               speed: GAUGE
+
+        thresholds:
+          "Low temperature":
+            dsnames: [conditions_temp]
+            type: MinMaxThreshold
+            minval: -2.0
+            eventClass: /Status
+            severity: Info
 
         graphs:
           Temperatures:
@@ -81,11 +89,11 @@ device_classes:
                 format: "%7.2lf"
 
               Min:
-                dpName: conditions_temp_min
+                dpName: conditions_tempMin
                 format: "%7.2lf"
 
               Max:
-                dpName: conditions_temp_max
+                dpName: conditions_tempMax
                 format: "%7.2lf"
 
           Humidity:

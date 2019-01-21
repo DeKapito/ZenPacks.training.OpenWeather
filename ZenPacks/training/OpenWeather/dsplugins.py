@@ -7,6 +7,7 @@ LOG = logging.getLogger('zen.OpenWeather')
 # stdlib Imports
 import json
 import time
+import re
 
 from Products.DataCollector.plugins.DataMaps import ObjectMap
 from zenoss.protocols.protobufs.zep_pb2 import SEVERITY_ERROR, SEVERITY_CLEAR
@@ -43,6 +44,10 @@ class Conditions(PythonDataSourcePlugin):
             'country_code': context.country_code,
             'location_name': context.title,
             }
+
+    def camel_case_to_snake(self, name):
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
     @inlineCallbacks
     def collect(self, config):
@@ -101,13 +106,16 @@ class Conditions(PythonDataSourcePlugin):
                             .format(config.id, datasource.params['location_name']),
                 })
 
+                returnValue(data)
+
             for datapoint_id in (x.id for x in datasource.points):
+                json_key = self.camel_case_to_snake(datapoint_id)
                 for block in (weather, main, wind):
-                    if datapoint_id not in block:
+                    if json_key not in block:
                         continue
 
                     try:
-                        value = block[datapoint_id]
+                        value = block[json_key]
                         if isinstance(value, basestring):
                             value = value.strip(' %')
 
