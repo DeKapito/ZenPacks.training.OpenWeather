@@ -65,48 +65,61 @@ class Conditions(PythonDataSourcePlugin):
 
                 response = json.loads(response)
             except Exception, e:
-                LOG.exception(
-                    "%s: failed to get conditions data for %s",
-                    config.id,
-                    datasource.params['location_name'])
+                message = "{}: failed to get conditions data for {}"\
+                    .format(config.id, datasource.params['location_name'])
+
+                LOG.exception(message)
 
                 data['events'].append({
                     'device': config.id,
                     'component': datasource.component,
-                    'eventKey': 'oweather-conditions',
-                    'eventClassKey': 'oweather',
+                    'eventKey': 'oweatherConditionsCollect_%s' % datasource.params['location_name'],
+                    'eventClassKey': 'oweatherConditions',
                     'severity': SEVERITY_ERROR,
-                    'summary':
-                        '{}: failed to get conditions data for {}'
-                        .format(config.id, datasource.params['location_name']),
-                    'message':
-                        '{}: failed to get conditions data for {}. Reason: {}'
-                        .format(config.id, datasource.params['location_name'], e.message),
+                    'summary': message,
+                    'message': e,
                 })
                 continue
+            else:
+                data['events'].append({
+                    'device': config.id,
+                    'component': datasource.component,
+                    'eventKey': 'oweatherConditionsCollect_%s' % datasource.params['location_name'],
+                    'eventClassKey': 'oweatherConditions',
+                    'severity': SEVERITY_CLEAR,
+                    'summary': '',
+                })
 
             try:
                 weather = response['weather'][0]
                 main = response['main']
                 wind = response['wind']
-            except (KeyError, TypeError):
-                LOG.exception(
-                    "%s: failed to get conditions data for %s",
-                    config.id,
-                    datasource.params['location_name'])
+            except (KeyError, IndexError), e:
+                message = "{}: failed to parse conditions data for {}" \
+                    .format(config.id, datasource.params['location_name'])
+
+                LOG.exception(message)
 
                 data['events'].append({
                     'device': config.id,
                     'component': datasource.component,
-                    'eventKey': 'oweather-conditions',
-                    'eventClassKey': 'oweather',
+                    'eventKey': 'oweatherConditionsParse_%s' % datasource.params['location_name'],
+                    'eventClassKey': 'oweatherConditions',
                     'severity': SEVERITY_ERROR,
-                    'message':
-                        '{}: failed to get conditions data for {}'
-                            .format(config.id, datasource.params['location_name']),
+                    'summary': message,
+                    'message': e
                 })
 
                 returnValue(data)
+            else:
+                data['events'].append({
+                    'device': config.id,
+                    'component': datasource.component,
+                    'eventKey': 'oweatherConditionsParse_%s' % datasource.params['location_name'],
+                    'eventClassKey': 'oweatherConditions',
+                    'severity': SEVERITY_CLEAR,
+                    'summary': '',
+                })
 
             for datapoint_id in (x.id for x in datasource.points):
                 json_key = self.camel_case_to_snake(datapoint_id)
@@ -131,12 +144,13 @@ class Conditions(PythonDataSourcePlugin):
                     dpname = '_'.join((datasource.datasource, datapoint_id))
                     data['values'][datasource.component][dpname] = (value, 'N')
 
+            # TODO: Add error handling
             data['maps'].append(
                 ObjectMap({
                     'relname': 'oweatherLocations',
                     'modname': 'ZenPacks.training.OpenWeather.OWeatherLocation',
                     'id': datasource.component,
-                    'weather': response['weather'][0]['description']
+                    'weather': weather['description']
                 }))
 
         returnValue(data)

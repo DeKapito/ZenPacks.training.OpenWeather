@@ -29,14 +29,30 @@ class Locations(PythonPlugin):
 
     deviceProperties = PythonPlugin.deviceProperties + requiredProperties
 
-    def makeEvent(self, eventService, deviceId, severity, message):
-        eventService.sendEvent({
-            'device': deviceId,
-            'eventKey': 'oweather-collect',
-            'eventClassKey': 'oweather',
-            'severity': severity,
-            'message': message
-        })
+    def getProperty(self, device, nameOfZProperty, log):
+        prop = getattr(device, nameOfZProperty, None)
+        if not prop:
+            message = '{}: {} not set' \
+                .format(device.id, nameOfZProperty)
+
+            log.error(message)
+            self._eventService.sendEvent({
+                'device': device.id,
+                'eventKey': 'oweatherMissing_%s' % nameOfZProperty,
+                'eventClassKey': 'oweatherModeling',
+                'severity': SEVERITY_ERROR,
+                'message': message
+            })
+        else:
+            self._eventService.sendEvent({
+                'device': device.id,
+                'eventKey': 'oweatherMissing_%s' % nameOfZProperty,
+                'eventClassKey': 'oweatherModeling',
+                'severity': SEVERITY_CLEAR,
+                'summary': ''
+            })
+
+        return prop
 
     @inlineCallbacks
     def collect(self, device, log):
@@ -44,60 +60,13 @@ class Locations(PythonPlugin):
         log.info("%s: collecting data", device.id)
         self._eventService = getUtility(IEventService)
 
-        apikey = getattr(device, 'zOWeatherAPIKey', None)
-        if not apikey:
-            message = '{}: {} not set. Get one from https://openweathermap.org/api'\
-                .format(device.id, 'zOWeatherAPIKey')
+        apikey = self.getProperty(device, 'zOWeatherAPIKey', log)
+        locations = self.getProperty(device, 'zOWeatherLocations', log)
+        apiver = self.getProperty(device, 'zOWeatherAPIVersion', log)
 
-            log.error(message)
-
-            self.makeEvent(
-                self._eventService,
-                device.id,
-                SEVERITY_ERROR,
-                message
-            )
-
+        # Check apikey, apiver, locations. If one is missing then return None
+        if not (apikey and apiver and locations):
             returnValue(None)
-
-        locations = getattr(device, 'zOWeatherLocations', None)
-        if not locations:
-            message = '{}: {} not set'\
-                .format(device.id, 'zOWeatherLocations')
-
-            log.error(message)
-
-            self.makeEvent(
-                self._eventService,
-                device.id,
-                SEVERITY_ERROR,
-                message
-            )
-
-            returnValue(None)
-
-        apiver = getattr(device, 'zOWeatherAPIVersion', None)
-        if not apiver:
-            message = '{}: {} not set' \
-                .format(device.id, 'zOWeatherAPIVersion')
-
-            log.error(message)
-
-            self.makeEvent(
-                self._eventService,
-                device.id,
-                SEVERITY_ERROR,
-                message
-            )
-
-            returnValue(None)
-
-        self.makeEvent(
-                self._eventService,
-                device.id,
-                SEVERITY_CLEAR,
-                'All good'
-            )
 
         responses = []
         for location in locations:
@@ -110,6 +79,8 @@ class Locations(PythonPlugin):
             except Exception, e:
                 log.error(
                     "%s: %s", device.id, e)
+
+                # TODO: Maybe add event
 
                 returnValue(None)
 
@@ -131,9 +102,27 @@ class Locations(PythonPlugin):
                         'country_code': result['c'],
                         'timezone': result['tzs'],
                         }))
-            except (KeyError, TypeError), e:
+            except (KeyError, IndexError, ValueError), e:
                 log.error(
                     "%s: %s", device.id, e)
+
+                # TODO: Change eventKey for avoid clearing for all cases!!!
+                self._eventService.sendEvent({
+                    'device': device.id,
+                    'eventKey': 'oweatherModelingParse',
+                    'eventClassKey': 'oweatherModeling',
+                    'severity': SEVERITY_ERROR,
+                    'message': e
+                })
                 continue
+            else:
+                # TODO: Change this code!!! Clearing rewrite error!!! In case when error raise before clearing.
+                self._eventService.sendEvent({
+                    'device': device.id,
+                    'eventKey': 'oweatherModelingParse',
+                    'eventClassKey': 'oweatherModeling',
+                    'severity': SEVERITY_CLEAR,
+                    'summary': ''
+                })
 
         return rm

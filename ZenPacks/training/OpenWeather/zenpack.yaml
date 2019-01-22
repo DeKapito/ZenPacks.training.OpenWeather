@@ -44,6 +44,18 @@ classes:
 class_relationships:
   - OWeatherDevice 1:MC OWeatherLocation
 
+event_classes:
+  /OWeather:
+    description: OWeather event class
+    remove: true
+    mappings:
+      OweatherConditions:
+        eventClassKey: oweatherConditions
+        remove: true
+      OweatherModeling:
+        eventClassKey: oweatherModeling
+        remove: true
+
 device_classes:
   /OpenWeather:
     zProperties:
