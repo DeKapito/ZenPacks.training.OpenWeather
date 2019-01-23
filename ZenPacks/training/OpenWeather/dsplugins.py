@@ -7,7 +7,6 @@ LOG = logging.getLogger('zen.OpenWeather')
 # stdlib Imports
 import json
 import time
-import re
 
 from Products.DataCollector.plugins.DataMaps import ObjectMap
 from zenoss.protocols.protobufs.zep_pb2 import SEVERITY_ERROR, SEVERITY_CLEAR
@@ -20,6 +19,8 @@ from twisted.web.client import getPage
 from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource import (
     PythonDataSourcePlugin,
     )
+
+from ZenPacks.training.OpenWeather.util import camelCaseToSnake
 
 
 class Conditions(PythonDataSourcePlugin):
@@ -44,10 +45,6 @@ class Conditions(PythonDataSourcePlugin):
             'country_code': context.country_code,
             'location_name': context.title,
             }
-
-    def camel_case_to_snake(self, name):
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
     @inlineCallbacks
     def collect(self, config):
@@ -91,7 +88,7 @@ class Conditions(PythonDataSourcePlugin):
                 })
 
             try:
-                weather = response['weather'][0]
+                weather = response['weather'][0]['description']
                 main = response['main']
                 wind = response['wind']
             except (KeyError, IndexError), e:
@@ -121,36 +118,30 @@ class Conditions(PythonDataSourcePlugin):
                     'summary': '',
                 })
 
-            for datapoint_id in (x.id for x in datasource.points):
-                json_key = self.camel_case_to_snake(datapoint_id)
+            for datapointId in (x.id for x in datasource.points):
+                jsonKey = camelCaseToSnake(datapointId)
                 for block in (weather, main, wind):
-                    if json_key not in block:
+                    if jsonKey not in block:
                         continue
-
                     try:
-                        value = block[json_key]
-                        if isinstance(value, basestring):
-                            value = value.strip(' %')
+                        value = float(block[jsonKey])
 
-                        value = float(value)
-
-                        if datapoint_id == 'pressure':
+                        if datapointId == 'pressure':
                             value *= 100
 
                     except (TypeError, ValueError):
                         # Sometimes values are NA or not available.
                         continue
 
-                    dpname = '_'.join((datasource.datasource, datapoint_id))
+                    dpname = '_'.join((datasource.datasource, datapointId))
                     data['values'][datasource.component][dpname] = (value, 'N')
 
-            # TODO: Add error handling
             data['maps'].append(
                 ObjectMap({
                     'relname': 'oweatherLocations',
                     'modname': 'ZenPacks.training.OpenWeather.OWeatherLocation',
                     'id': datasource.component,
-                    'weather': weather['description']
+                    'weather': weather
                 }))
 
         returnValue(data)

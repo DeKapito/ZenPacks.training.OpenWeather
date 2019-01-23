@@ -88,7 +88,7 @@ device_classes:
             dsnames: [conditions_temp]
             type: MinMaxThreshold
             minval: -2.0
-            eventClass: /Status
+            eventClass: /OWeather
             severity: Info
 
         graphs:

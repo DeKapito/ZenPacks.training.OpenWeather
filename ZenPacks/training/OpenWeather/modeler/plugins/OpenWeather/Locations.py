@@ -71,18 +71,36 @@ class Locations(PythonPlugin):
         responses = []
         for location in locations:
             try:
+                shortLocation = location.split(',')[0]
+
                 response = yield getPage(
                     'http://autocomplete.wunderground.com/aq?query={query}'
                     .format(query=urllib.quote(location)))
 
-                responses.append(json.loads(response))
+                responses.append((shortLocation, json.loads(response)))
             except Exception, e:
-                log.error(
-                    "%s: %s", device.id, e)
+                message = "%s: failed to collect data" % device.id
+                log.error(message)
 
-                # TODO: Maybe add event
+                self._eventService.sendEvent({
+                    'device': device.id,
+                    'eventKey': 'oweatherCollect',
+                    'eventClassKey': 'oweatherModeling',
+                    'severity': SEVERITY_ERROR,
+                    'summary': message,
+                    'message': e,
+                })
 
                 returnValue(None)
+
+            else:
+                self._eventService.sendEvent({
+                    'device': device.id,
+                    'eventKey': 'oweatherCollect',
+                    'eventClassKey': 'oweatherModeling',
+                    'severity': SEVERITY_CLEAR,
+                    'summary': '',
+                })
 
         returnValue(responses)
 
@@ -91,7 +109,7 @@ class Locations(PythonPlugin):
 
         rm = self.relMap()
 
-        for response in results:
+        for location, response in results:
             try:
                 for result in response['RESULTS']:
                     rm.append(self.objectMap({
@@ -106,20 +124,18 @@ class Locations(PythonPlugin):
                 log.error(
                     "%s: %s", device.id, e)
 
-                # TODO: Change eventKey for avoid clearing for all cases!!!
                 self._eventService.sendEvent({
                     'device': device.id,
-                    'eventKey': 'oweatherModelingParse',
+                    'eventKey': 'oweatherModelingParse_%s' % location,
                     'eventClassKey': 'oweatherModeling',
                     'severity': SEVERITY_ERROR,
                     'message': e
                 })
                 continue
             else:
-                # TODO: Change this code!!! Clearing rewrite error!!! In case when error raise before clearing.
                 self._eventService.sendEvent({
                     'device': device.id,
-                    'eventKey': 'oweatherModelingParse',
+                    'eventKey': 'oweatherModelingParse_%s' % location,
                     'eventClassKey': 'oweatherModeling',
                     'severity': SEVERITY_CLEAR,
                     'summary': ''
