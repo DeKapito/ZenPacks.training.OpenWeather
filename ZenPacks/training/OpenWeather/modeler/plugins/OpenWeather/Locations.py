@@ -111,6 +111,17 @@ class Locations(PythonPlugin):
 
         for location, response in results:
             try:
+                if len(response['RESULTS']) == 0:
+                    self._eventService.sendEvent({
+                        'device': device.id,
+                        'eventKey': 'oweatherModelingParse_%s' % location,
+                        'eventClassKey': 'oweatherModeling',
+                        'severity': SEVERITY_ERROR,
+                        'summary': '{}: failed to parse data for {}'.format(device.id, location),
+                        'message': 'Check the location. Maybe the service does not support it',
+                    })
+                    continue
+
                 for result in response['RESULTS']:
                     rm.append(self.objectMap({
                         'id': self.prepId(result['zmw']),
