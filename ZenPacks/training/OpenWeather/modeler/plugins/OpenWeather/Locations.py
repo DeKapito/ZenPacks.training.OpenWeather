@@ -29,6 +29,9 @@ class Locations(PythonPlugin):
 
     deviceProperties = PythonPlugin.deviceProperties + requiredProperties
 
+    def _makeEvent(self, deviceId, severity, evClassKey='oweatherModeling'):
+        pass
+
     def getProperty(self, device, nameOfZProperty, log):
         prop = getattr(device, nameOfZProperty, None)
         if not prop:
@@ -38,18 +41,18 @@ class Locations(PythonPlugin):
             log.error(message)
             self._eventService.sendEvent({
                 'device': device.id,
-                'eventKey': 'oweatherMissing_%s' % nameOfZProperty,
+                'eventKey': 'oweatherMissing_{}'.format(nameOfZProperty),
                 'eventClassKey': 'oweatherModeling',
                 'severity': SEVERITY_ERROR,
-                'message': message
+                'message': message,
             })
         else:
             self._eventService.sendEvent({
                 'device': device.id,
-                'eventKey': 'oweatherMissing_%s' % nameOfZProperty,
+                'eventKey': 'oweatherMissing_{}'.format(nameOfZProperty),
                 'eventClassKey': 'oweatherModeling',
                 'severity': SEVERITY_CLEAR,
-                'summary': ''
+                'summary': 'Success'
             })
 
         return prop
@@ -65,7 +68,7 @@ class Locations(PythonPlugin):
         apiver = self.getProperty(device, 'zOWeatherAPIVersion', log)
 
         # Check apikey, apiver, locations. If one is missing then return None
-        if not (apikey and apiver and locations):
+        if not all((apikey, apiver, locations)):
             returnValue(None)
 
         responses = []
@@ -78,8 +81,8 @@ class Locations(PythonPlugin):
                     .format(query=urllib.quote(location)))
 
                 responses.append((shortLocation, json.loads(response)))
-            except Exception, e:
-                message = "%s: failed to collect data" % device.id
+            except Exception as e:
+                message = "{}: failed to collect data. {}".format(device.id, e.message)
                 log.error(message)
 
                 self._eventService.sendEvent({
@@ -87,8 +90,8 @@ class Locations(PythonPlugin):
                     'eventKey': 'oweatherCollect',
                     'eventClassKey': 'oweatherModeling',
                     'severity': SEVERITY_ERROR,
-                    'summary': message,
-                    'message': e,
+                    'summary': 'Failed to collect data',
+                    'message': message,
                 })
 
                 returnValue(None)
@@ -99,7 +102,7 @@ class Locations(PythonPlugin):
                     'eventKey': 'oweatherCollect',
                     'eventClassKey': 'oweatherModeling',
                     'severity': SEVERITY_CLEAR,
-                    'summary': '',
+                    'summary': 'Data collected successfully',
                 })
 
         returnValue(responses)
@@ -111,14 +114,17 @@ class Locations(PythonPlugin):
 
         for location, response in results:
             try:
-                if len(response['RESULTS']) == 0:
+                if not response['RESULTS']:
                     self._eventService.sendEvent({
                         'device': device.id,
-                        'eventKey': 'oweatherModelingParse_%s' % location,
+                        'eventKey': 'oweatherModelingParse_{}'.format(location),
                         'eventClassKey': 'oweatherModeling',
                         'severity': SEVERITY_ERROR,
-                        'summary': '{}: failed to parse data for {}'.format(device.id, location),
-                        'message': 'Check the location. Maybe the service does not support it',
+                        'summary': 'Failed to parse data',
+                        'message':
+                            '{}: failed to parse data for {}. '
+                            'Check the location. Maybe the service does not support it'
+                            .format(device.id, location)
                     })
                     continue
 
@@ -131,25 +137,26 @@ class Locations(PythonPlugin):
                         'country_code': result['c'],
                         'timezone': result['tzs'],
                         }))
-            except (KeyError, IndexError, ValueError), e:
+            except (KeyError, IndexError, ValueError) as e:
                 log.error(
                     "%s: %s", device.id, e)
 
                 self._eventService.sendEvent({
                     'device': device.id,
-                    'eventKey': 'oweatherModelingParse_%s' % location,
+                    'eventKey': 'oweatherModelingParse_{}'.format(location),
                     'eventClassKey': 'oweatherModeling',
                     'severity': SEVERITY_ERROR,
-                    'message': e
+                    'summary': 'Failed to parse data',
+                    'message': e.message,
                 })
                 continue
             else:
                 self._eventService.sendEvent({
                     'device': device.id,
-                    'eventKey': 'oweatherModelingParse_%s' % location,
+                    'eventKey': 'oweatherModelingParse_{}'.format(location),
                     'eventClassKey': 'oweatherModeling',
                     'severity': SEVERITY_CLEAR,
-                    'summary': ''
+                    'summary': 'Data parsed successfully'
                 })
 
         return rm
