@@ -29,8 +29,18 @@ class Locations(PythonPlugin):
 
     deviceProperties = PythonPlugin.deviceProperties + requiredProperties
 
-    def _makeEvent(self, deviceId, severity, evClassKey='oweatherModeling'):
-        pass
+    def _makeEvent(self, deviceId, severity, eventKey, summary=None, message=None):
+        if severity == SEVERITY_CLEAR:
+            summary = '{}: success'.format(eventKey)
+
+        self._eventService.sendEvent({
+            'device': deviceId,
+            'eventKey': eventKey,
+            'eventClassKey': 'oweatherModeling',
+            'severity': severity,
+            'summary': summary,
+            'message': message,
+        })
 
     def getProperty(self, device, nameOfZProperty, log):
         prop = getattr(device, nameOfZProperty, None)
@@ -39,21 +49,20 @@ class Locations(PythonPlugin):
                 .format(device.id, nameOfZProperty)
 
             log.error(message)
-            self._eventService.sendEvent({
-                'device': device.id,
-                'eventKey': 'oweatherMissing_{}'.format(nameOfZProperty),
-                'eventClassKey': 'oweatherModeling',
-                'severity': SEVERITY_ERROR,
-                'message': message,
-            })
+
+            self._makeEvent(
+                device.id,
+                SEVERITY_ERROR,
+                'oweatherMissing_{}'.format(nameOfZProperty),
+                summary='zProperty is missing',
+                message=message
+            )
         else:
-            self._eventService.sendEvent({
-                'device': device.id,
-                'eventKey': 'oweatherMissing_{}'.format(nameOfZProperty),
-                'eventClassKey': 'oweatherModeling',
-                'severity': SEVERITY_CLEAR,
-                'summary': 'Success'
-            })
+            self._makeEvent(
+                device.id,
+                SEVERITY_CLEAR,
+                'oweatherMissing_{}'.format(nameOfZProperty),
+            )
 
         return prop
 
@@ -85,25 +94,22 @@ class Locations(PythonPlugin):
                 message = "{}: failed to collect data. {}".format(device.id, e.message)
                 log.error(message)
 
-                self._eventService.sendEvent({
-                    'device': device.id,
-                    'eventKey': 'oweatherCollect',
-                    'eventClassKey': 'oweatherModeling',
-                    'severity': SEVERITY_ERROR,
-                    'summary': 'Failed to collect data',
-                    'message': message,
-                })
+                self._makeEvent(
+                    device.id,
+                    SEVERITY_ERROR,
+                    'oweatherCollect',
+                    summary='Failed to collect data',
+                    message=message
+                )
 
                 returnValue(None)
 
             else:
-                self._eventService.sendEvent({
-                    'device': device.id,
-                    'eventKey': 'oweatherCollect',
-                    'eventClassKey': 'oweatherModeling',
-                    'severity': SEVERITY_CLEAR,
-                    'summary': 'Data collected successfully',
-                })
+                self._makeEvent(
+                    device.id,
+                    SEVERITY_CLEAR,
+                    'oweatherCollect'
+                )
 
         returnValue(responses)
 
@@ -115,17 +121,18 @@ class Locations(PythonPlugin):
         for location, response in results:
             try:
                 if not response['RESULTS']:
-                    self._eventService.sendEvent({
-                        'device': device.id,
-                        'eventKey': 'oweatherModelingParse_{}'.format(location),
-                        'eventClassKey': 'oweatherModeling',
-                        'severity': SEVERITY_ERROR,
-                        'summary': 'Failed to parse data',
-                        'message':
-                            '{}: failed to parse data for {}. '
-                            'Check the location. Maybe the service does not support it'
-                            .format(device.id, location)
-                    })
+                    message = '{}: failed to parse data for {}. '\
+                              'Check the location. Maybe the service does not support it'\
+                        .format(device.id, location)
+                    log.error(message)
+
+                    self._makeEvent(
+                        device.id,
+                        SEVERITY_ERROR,
+                        'oweatherModelingParse_{}'.format(location),
+                        summary='Failed to parse data',
+                        message=message
+                    )
                     continue
 
                 for result in response['RESULTS']:
@@ -139,24 +146,21 @@ class Locations(PythonPlugin):
                         }))
             except (KeyError, IndexError, ValueError) as e:
                 log.error(
-                    "%s: %s", device.id, e)
+                    "%s: %s", device.id, e.message)
 
-                self._eventService.sendEvent({
-                    'device': device.id,
-                    'eventKey': 'oweatherModelingParse_{}'.format(location),
-                    'eventClassKey': 'oweatherModeling',
-                    'severity': SEVERITY_ERROR,
-                    'summary': 'Failed to parse data',
-                    'message': e.message,
-                })
+                self._makeEvent(
+                    device.id,
+                    SEVERITY_ERROR,
+                    'oweatherModelingParse_{}'.format(location),
+                    summary='Failed to parse data',
+                    message=e.message
+                )
                 continue
             else:
-                self._eventService.sendEvent({
-                    'device': device.id,
-                    'eventKey': 'oweatherModelingParse_{}'.format(location),
-                    'eventClassKey': 'oweatherModeling',
-                    'severity': SEVERITY_CLEAR,
-                    'summary': 'Data parsed successfully'
-                })
+                self._makeEvent(
+                    device.id,
+                    SEVERITY_CLEAR,
+                    'oweatherModelingParse_{}'.format(location)
+                )
 
         return rm

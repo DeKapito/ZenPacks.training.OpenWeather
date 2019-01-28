@@ -46,9 +46,23 @@ class Conditions(PythonDataSourcePlugin):
             'location_name': context.title,
             }
 
+    def _makeEvent(self, deviceId, component, severity, eventKey, summary=None, message=None):
+        if severity == SEVERITY_CLEAR:
+            summary = '{}: success'.format(eventKey)
+
+        self.data['events'].append({
+            'device': deviceId,
+            'component': component,
+            'eventKey': eventKey,
+            'eventClassKey': 'oweatherConditions',
+            'severity': severity,
+            'summary': summary,
+            'message': message,
+        })
+
     @inlineCallbacks
     def collect(self, config):
-        data = self.new_data()
+        self.data = self.new_data()
         datasource = config.datasources[0]
 
         try:
@@ -67,24 +81,21 @@ class Conditions(PythonDataSourcePlugin):
 
             LOG.exception(message)
 
-            data['events'].append({
-                'device': config.id,
-                'component': datasource.component,
-                'eventKey': 'oweatherConditionsCollect_{}'.format(datasource.params['location_name']),
-                'eventClassKey': 'oweatherConditions',
-                'severity': SEVERITY_ERROR,
-                'summary': 'Failed to get conditions',
-                'message': message,
-            })
+            self._makeEvent(
+                config.id,
+                datasource.component,
+                SEVERITY_ERROR,
+                'oweatherConditionsCollect_{}'.format(datasource.params['location_name']),
+                summary='Failed to get conditions',
+                message=message
+            )
         else:
-            data['events'].append({
-                'device': config.id,
-                'component': datasource.component,
-                'eventKey': 'oweatherConditionsCollect_{}'.format(datasource.params['location_name']),
-                'eventClassKey': 'oweatherConditions',
-                'severity': SEVERITY_CLEAR,
-                'summary': 'Conditions collected successfully',
-            })
+            self._makeEvent(
+                config.id,
+                datasource.component,
+                SEVERITY_CLEAR,
+                'oweatherConditionsCollect_{}'.format(datasource.params['location_name'])
+            )
 
         try:
             weather = response['weather'][0]['description']
@@ -96,26 +107,23 @@ class Conditions(PythonDataSourcePlugin):
 
             LOG.exception(message)
 
-            data['events'].append({
-                'device': config.id,
-                'component': datasource.component,
-                'eventKey': 'oweatherConditionsParse_{}'.format(datasource.params['location_name']),
-                'eventClassKey': 'oweatherConditions',
-                'severity': SEVERITY_ERROR,
-                'summary': 'Failed to parse conditions',
-                'message': message
-            })
+            self._makeEvent(
+                config.id,
+                datasource.component,
+                SEVERITY_ERROR,
+                'oweatherConditionsParse_{}'.format(datasource.params['location_name']),
+                summary='Failed to parse conditions',
+                message=message
+            )
 
-            returnValue(data)
+            returnValue(self.data)
         else:
-            data['events'].append({
-                'device': config.id,
-                'component': datasource.component,
-                'eventKey': 'oweatherConditionsParse_{}'.format(datasource.params['location_name']),
-                'eventClassKey': 'oweatherConditions',
-                'severity': SEVERITY_CLEAR,
-                'summary': 'Conditions parsed successfully',
-            })
+            self._makeEvent(
+                config.id,
+                datasource.component,
+                SEVERITY_CLEAR,
+                'oweatherConditionsParse_{}'.format(datasource.params['location_name'])
+            )
 
         for datapointId in (x.id for x in datasource.points):
             jsonKey = camelCaseToSnake(datapointId)
@@ -133,9 +141,9 @@ class Conditions(PythonDataSourcePlugin):
                     continue
 
                 dpname = '_'.join((datasource.datasource, datapointId))
-                data['values'][datasource.component][dpname] = (value, 'N')
+                self.data['values'][datasource.component][dpname] = (value, 'N')
 
-            data['maps'].append(
+            self.data['maps'].append(
                 ObjectMap({
                     'relname': 'oweatherLocations',
                     'modname': 'ZenPacks.training.OpenWeather.OWeatherLocation',
@@ -143,4 +151,4 @@ class Conditions(PythonDataSourcePlugin):
                     'weather': weather
                 }))
 
-        returnValue(data)
+        returnValue(self.data)
