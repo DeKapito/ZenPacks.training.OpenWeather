@@ -98,7 +98,7 @@ class Conditions(PythonDataSourcePlugin):
             )
 
         try:
-            weather = response['weather'][0]['description']
+            weatherId = response['weather'][0]['id']
             main = response['main']
             wind = response['wind']
         except (KeyError, IndexError) as e:
@@ -127,7 +127,7 @@ class Conditions(PythonDataSourcePlugin):
 
         for datapointId in (x.id for x in datasource.points):
             jsonKey = camelCaseToSnake(datapointId)
-            for block in (weather, main, wind):
+            for block in (main, wind):
                 if jsonKey not in block:
                     continue
                 try:
@@ -143,12 +143,7 @@ class Conditions(PythonDataSourcePlugin):
                 dpname = '_'.join((datasource.datasource, datapointId))
                 self.data['values'][datasource.component][dpname] = (value, 'N')
 
-            self.data['maps'].append(
-                ObjectMap({
-                    'relname': 'oweatherLocations',
-                    'modname': 'ZenPacks.training.OpenWeather.OWeatherLocation',
-                    'id': datasource.component,
-                    'weather': weather
-                }))
+        dpname = '_'.join((datasource.datasource, 'weather'))
+        self.data['values'][datasource.component][dpname] = (weatherId, 'N')
 
         returnValue(self.data)

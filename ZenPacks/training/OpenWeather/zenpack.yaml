@@ -26,7 +26,7 @@ classes:
 
     properties:
       city_name:
-        label: Name
+        label: Short Name
 
       country_code:
         label: Country Code
@@ -35,7 +35,17 @@ classes:
         label: Time Zone
 
       weather:
+        type: int
         label: Weather
+        enum:
+          -1: 'Unknown'
+          800: 'Clear sky'
+          801: 'Few clouds'
+          802: 'Scattered clouds'
+          803: 'Broken clouds'
+          804: 'Overcast clouds'
+        datapoint: conditions_weather
+        datapoint_default: -1
 
       api_link:
         label: API Link
@@ -82,6 +92,7 @@ device_classes:
               tempMin: GAUGE
               tempMax: GAUGE
               speed: GAUGE
+              weather: GAUGE
 
         thresholds:
           "Low temperature":
