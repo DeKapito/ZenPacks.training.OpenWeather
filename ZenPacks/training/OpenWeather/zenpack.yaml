@@ -5,6 +5,9 @@ zProperties:
     category: Open Weather
 
   zOWeatherAPIKey: {}
+  zOWeatherAPIVersion:
+    type: float
+    default: 2.5
   zOWeatherLocations:
     type: lines
     default:
@@ -23,7 +26,7 @@ classes:
 
     properties:
       city_name:
-        label: Name
+        label: Short Name
 
       country_code:
         label: Country Code
@@ -32,7 +35,17 @@ classes:
         label: Time Zone
 
       weather:
+        type: int
         label: Weather
+        enum:
+          -1: 'Unknown'
+          800: 'Clear sky'
+          801: 'Few clouds'
+          802: 'Scattered clouds'
+          803: 'Broken clouds'
+          804: 'Overcast clouds'
+        datapoint: conditions_weather
+        datapoint_default: -1
 
       api_link:
         label: API Link
@@ -40,6 +53,18 @@ classes:
 
 class_relationships:
   - OWeatherDevice 1:MC OWeatherLocation
+
+event_classes:
+  /OWeather:
+    description: OWeather event class
+    remove: true
+    mappings:
+      OweatherConditions:
+        eventClassKey: oweatherConditions
+        remove: true
+      OweatherModeling:
+        eventClassKey: oweatherModeling
+        remove: true
 
 device_classes:
   /OpenWeather:
@@ -58,19 +83,28 @@ device_classes:
           conditions:
             type: Python
             plugin_classname: ZenPacks.training.OpenWeather.dsplugins.Conditions
-            cycletime: "600"
+            cycletime: "120"
 
             datapoints:
               temp: GAUGE
               pressure: GAUGE
               humidity: GAUGE
-              temp_min: GAUGE
-              temp_max: GAUGE
+              tempMin: GAUGE
+              tempMax: GAUGE
               speed: GAUGE
+              weather: GAUGE
+
+        thresholds:
+          "Low temperature":
+            dsnames: [conditions_temp]
+            type: MinMaxThreshold
+            minval: -2.0
+            eventClass: /OWeather
+            severity: Info
 
         graphs:
           Temperatures:
-            units: "degrees K."
+            units: "degrees C."
 
             graphpoints:
               Temperature:
@@ -78,11 +112,11 @@ device_classes:
                 format: "%7.2lf"
 
               Min:
-                dpName: conditions_temp_min
+                dpName: conditions_tempMin
                 format: "%7.2lf"
 
               Max:
-                dpName: conditions_temp_max
+                dpName: conditions_tempMax
                 format: "%7.2lf"
 
           Humidity:
@@ -96,16 +130,16 @@ device_classes:
                 format: "%7.2lf%%"
 
           Pressure:
-            units: millibars
+            units: pascals
             miny: 0
 
             graphpoints:
               Pressure:
                 dpName: conditions_pressure
-                format: "%7.0lf"
+                format: "%7.2lf"
 
           Wind Speed:
-            units: kph
+            units: mps
             miny: 0
 
             graphpoints:

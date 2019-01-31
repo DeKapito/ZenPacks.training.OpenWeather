@@ -3,13 +3,13 @@
 # or saved.  Do not modify them directly here.
 # NB: PACKAGES is deprecated
 NAME = "ZenPacks.training.OpenWeather"
-VERSION = "1.0.0dev"
-AUTHOR = "Your Name Here"
-LICENSE = ""
+VERSION = "1.0.0"
+AUTHOR = "Dima Kapitula - dimakapitula@gmail.com"
+LICENSE = "GPLv2"
 NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.training']
 PACKAGES = ['ZenPacks', 'ZenPacks.training', 'ZenPacks.training.OpenWeather']
 INSTALL_REQUIRES = ['ZenPacks.zenoss.ZenPackLib']
-COMPAT_ZENOSS_VERS = ""
+COMPAT_ZENOSS_VERS = ">=4.0"
 PREV_ZENPACK_NAME = ""
 # STOP_REPLACEMENTS
 ################################
