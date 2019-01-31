@@ -1,0 +1,1 @@
+ZenPacks/training/OpenWeather/README.rst
